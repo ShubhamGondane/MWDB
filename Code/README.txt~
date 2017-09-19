@@ -1,0 +1,62 @@
+Getting Started
+
+1. Installing Anaconda
+Download Anaconda from the following url
+	 https://www.anaconda.com/download/
+
+2. Creating conda environment
+Command line method:
+Open terminal on mac or command prompt on windows and type the following
+
+     conda create -n env_name python=3.6 anaconda
+
+Install pandas and numpy packages
+
+	conda install --name env_name pandas
+	conda install --name env_name numpy
+
+GUI method:
+Open the anaconda interface, on the left pane go to environments there select the add environment option. Give the environment a name.
+You can see the packages installed in the given environment. Add pandas and numpy by selecting the packages option on the left side of anaconda's interface.
+
+Running the programs
+
+1. Storing the datasets
+Datasets can be stored anywhere as long as the path changes are made to the program files.
+
+2. Running the programs
+Make appropriate changes to the dataset paths in the program.
+
+Open the conda terminal
+Activate conda environment
+
+source activate env_name
+For task1:
+    cd /path/to/pyfile
+    
+    python3 print_actor_vector.py 1698048 TF
+    
+    python3 print_actor_vector.py 1698048 TF-IDF
+
+For task2:
+    cd /path/to/pyfile
+    
+    python3 print_genre_vector.py Comedy TF
+    
+    python3 print_genre_vector.py Comedy TF-IDF
+
+For task3:
+    cd /path/to/pyfile
+    
+    python3 print_user_vector.py 146 TF
+    
+    python3 print_user_vector.py 146 TF-IDF
+
+For task4:
+    cd /path/to/pyfile
+    
+    python3 differentiate_genre.py Comedy Drama TF-IDF-DIFF
+    
+    python3 differentiate_genre.py Comedy Drama P-DIFF1
+    
+    python3 differentiate_genre.py Comedy Drama P-DIFF2
