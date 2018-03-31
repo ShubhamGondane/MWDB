@@ -1,0 +1,66 @@
+#!/usr/bin/env python
+
+import operator
+import sys
+
+import numpy as np
+import copy
+from scipy import spatial
+from sklearn.datasets.base import load_data
+from common.createDataSet import CreateDataSet
+from common.tfidf import TfIdf
+from common.svm import *
+from scipy import linalg
+from common import basics
+from sklearn.decomposition import LatentDirichletAllocation
+
+# get input from shell
+if len(sys.argv) != 2:
+    print("Use ---> ./task5-a-b (svm)")
+    exit(0)
+
+criteria = sys.argv[1]
+similarity_matrix_map = {}
+data_set = CreateDataSet()
+lables = []
+movies = []
+
+# get tf-idf object feature  for all actors tag relationship
+
+tfidf = TfIdf()
+object_feature_matrix, all_movies, all_genres, movie_genre_map = tfidf.get_movie_genre_space()
+print(all_movies[0:6])
+movieid_movie_map = data_set.get_movieid_movie_map()
+classfier_map = {}
+
+# Take input data from user
+print("Enter number of lables")
+no_lables = input()
+for i in range(no_lables):
+    print("Enter lable")
+    lables.append(raw_input())
+    print("Enter Movie id releated to lable")
+    movies.append(object_feature_matrix[all_movies.index(raw_input())])
+    #movies.append([object_feature_matrix[all_movies.index(elem)] for elem in raw_input().split("|")])
+
+movie_arr = np.array(movies)
+# SVD
+if criteria == "svm":
+
+    #print("cool")
+    lable = np.array([all_genres.index("Comedy"), all_genres.index("Drama"), all_genres.index("War"), all_genres.index("Crime")])
+    #print(object_feature_matrix[0:4], np.array([all_genres.index("Comedy"), all_genres.index("Drama"), all_genres.index("War"), all_genres.index("Crime")]))
+    clf = SVM()
+    clf.fits(movie_arr, lables)
+
+    for elem in zip(all_movies,clf.prediction(object_feature_matrix)):
+        if(elem[1] not in classfier_map):
+            classfier_map[elem[1]] = [movieid_movie_map[elem[0]]]
+        else:
+            classfier_map[elem[1]].append(movieid_movie_map[elem[0]])
+
+    for elem in classfier_map:
+        print(elem)
+        print("--->\n")
+        print(classfier_map[elem])
+        print("\n")

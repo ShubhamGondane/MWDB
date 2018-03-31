@@ -1,0 +1,148 @@
+#!/usr/bin/env python
+
+import operator
+import sys
+
+import numpy as np
+import copy
+from scipy import spatial
+from sklearn.datasets.base import load_data
+
+from common.createDataSet import CreateDataSet
+from common.tfidf import TfIdf
+from scipy import linalg
+from common import basics
+from sklearn.decomposition import LatentDirichletAllocation
+
+# get input from shell
+if len(sys.argv) != 3:
+    print("Use ---> ./task2-a-b userid (pca|svd|lda)")
+    exit(0)
+
+
+user_id = sys.argv[1]
+criteria = sys.argv[2]
+similarity_matrix_map = {}
+data_set = CreateDataSet()
+# get tf-idf object feature  for all actors tag relationship
+
+tfidf = TfIdf()
+object_feature_matrix, all_movies, all_genres, movie_genre_map = tfidf.get_movie_genre_space()
+movieid_movie_map = data_set.get_movieid_movie_map()
+
+#  TF-IDF using cosine similarity
+# find out input actors for a given movie
+
+input_movies = data_set.get_movies_by_user(user_id)
+
+
+
+reduced_movies = copy.deepcopy(all_movies)
+for movie in input_movies:
+    try:
+        reduced_movies.remove(movie)
+    except:
+        continue
+
+# SVD
+if criteria == "svd":
+
+    # SVD computation
+
+    reduced_object_feature_matrix, S, VT = linalg.svd(object_feature_matrix, full_matrices=False)
+    similarity_matrix_map = {}
+    similarity_matrix = []
+
+#  find nearest 10 neighbours using adjusted cosine similarity
+
+    all_indices = data_set.get_all_indicies(all_movies, input_movies)
+    input_movie_matrix = reduced_object_feature_matrix[all_indices]
+    reduced_object_feature_matrix = np.delete(reduced_object_feature_matrix, all_indices, 0)
+
+    for movie, movie_matrix in zip(input_movies, input_movie_matrix):
+        similarity_matrix_map[movie] = []
+        for row in reduced_object_feature_matrix:
+            similarity_matrix_map[movie].append(1-spatial.distance.cosine(row, movie_matrix))
+
+    similarity_matrix = [sum(x) for x in zip(*similarity_matrix_map.values())]
+
+    movie_distance_tuple = zip(reduced_movies, similarity_matrix)
+    movie_distance_tuple.sort(key=lambda tup: tup[1], reverse=True)
+    relevant_movies = {}
+    print("2. ---------SVD-Cosine ----------- ")
+    print("---------5 movies ----------- ")
+    input_movies = []
+    for tuple in movie_distance_tuple[0:5]:
+        print(tuple[0] + "-->" + movieid_movie_map[tuple[0]] + "-->" + "|".join(movie_genre_map[tuple[0]]) + " "+str(tuple[1]))
+
+# PCA
+if criteria == "pca":
+    # PCA computation
+
+    reduced_object_feature_matrix, S, VT = linalg.svd(np.cov(object_feature_matrix), full_matrices=False)
+    similarity_matrix_map = {}
+    similarity_matrix = []
+
+#  find nearest 10 neighbours using adjusted cosine similarity
+
+    all_indices = data_set.get_all_indicies(all_movies, input_movies)
+    input_movie_matrix = reduced_object_feature_matrix[all_indices]
+    reduced_object_feature_matrix = np.delete(reduced_object_feature_matrix, all_indices, 0)
+
+    for movie, movie_matrix in zip(input_movies, input_movie_matrix):
+        similarity_matrix_map[movie] = []
+        for row in reduced_object_feature_matrix:
+            similarity_matrix_map[movie].append(1-spatial.distance.cosine(row, movie_matrix))
+
+    similarity_matrix = [sum(x) for x in zip(*similarity_matrix_map.values())]
+
+    movie_distance_tuple = zip(reduced_movies, similarity_matrix)
+    movie_distance_tuple.sort(key=lambda tup: tup[1], reverse=True)
+    relevant_movies = {}
+    print(len(movie_distance_tuple))
+    print("2. ---------PCA-Cosine ----------- ")
+    print("---------5 movies ----------- ")
+    input_movies = []
+    for tuple in movie_distance_tuple[0:5]:
+        print(tuple[0] + "-->" + movieid_movie_map[tuple[0]] + "-->" + "|".join(movie_genre_map[tuple[0]]) + " "+str(tuple[1]))
+
+
+if criteria == "lda":
+    # LDA computation
+
+    # create object feature matrix with zero values
+    object_feature_matrix = np.zeros(shape=(len(all_movies), len(all_genres)))
+    # fill up the matrix
+    object_feature_matrix = basics.fill_matrix_count(object_feature_matrix, movie_genre_map, all_movies, all_genres)
+
+    lda = LatentDirichletAllocation(n_components=len(all_movies),
+                                    max_iter=1,
+                                    learning_method='online',
+                                    learning_offset=50.,
+                                    random_state=0)
+    lda.fit_transform(object_feature_matrix)
+
+    similarity_matrix = []
+    similarity_matrix_map = {}
+
+    #  find nearest 10 neighbours using adjusted cosine similarity
+
+    # reduce matrix to take 5 column values only
+    reduced_object_feature_matrix = lda.components_[:]
+    all_indices = data_set.get_all_indicies(all_movies, input_movies)
+    input_movie_matrix = reduced_object_feature_matrix[all_indices]
+    reduced_object_feature_matrix = np.delete(reduced_object_feature_matrix, all_indices, 0)
+    for movie, movie_matrix in zip(input_movies, input_movie_matrix):
+        similarity_matrix_map[movie] = []
+        for row in reduced_object_feature_matrix:
+            similarity_matrix_map[movie].append(1 - spatial.distance.cosine(row, movie_matrix))
+
+    similarity_matrix = [sum(x) for x in zip(*similarity_matrix_map.values())]
+
+    movie_distance_tuple = zip(reduced_movies, similarity_matrix)
+    movie_distance_tuple.sort(key=lambda tup: tup[1], reverse=True)
+    relevant_movies = {}
+    print("3. ---------LDA-Cosine ----------- ")
+    print("---------5 movies ----------- ")
+    for tuple in movie_distance_tuple[0:5]:
+        print( tuple[0] + "-->" + movieid_movie_map[tuple[0]] + "-->" + "|".join(movie_genre_map[tuple[0]]) + " "+str(tuple[1]))
